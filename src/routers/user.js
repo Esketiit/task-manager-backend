@@ -1,16 +1,13 @@
 const express = require('express')
 const User = require('../models/user')
+const auth = require("../middleware/auth")
 const router = new express.Router()
 
 // Users endpoints
-// index
-router.get('/users', async (req, res) => {
-  try {
-    const users = await User.find({})
-    res.status(200).send(users)
-  } catch (e) {
-    res.status(500).send(e)
-  }
+
+// sends authenticated user data
+router.get('/users/me', auth, async (req, res) => {
+  res.send(req.user)
 })
 
 //show
@@ -18,7 +15,7 @@ router.get('/users/:id', async (req, res) => {
   const _id = req.params.id
 
   try {
-    const user = await User.findById(_id)
+    const user = await User.findById(_id).lean()
     if (!user) {
       return res.status(404).send("user not found")
     }
@@ -42,6 +39,8 @@ router.post('/users', async (req, res) => {
 })
 
 // login
+// A user can be logged on to more than one device, which means
+// more than one token has to be stored in a user object
 router.post('/users/login', async (req,res) => {
   try {
     const user = await User.findByCredentials(req.body.email, req.body.password)
@@ -50,6 +49,37 @@ router.post('/users/login', async (req,res) => {
   } catch (e) {
     res.status(400).send()
   }
+})
+
+// logout
+router.post('/users/logout', auth, async (req, res) => {
+  // #auth runs before the code in the route handler does
+  // and auth gives access to user data in req.user
+  try {
+    // .filter is used on the users array of tokens to delete the token
+    // of the device being logged off of
+    // we want to keep the others so that the user stay logged in on other devices
+    req.user.tokens = req.user.tokens.filter(token => {
+      return token.token !== req.token
+    })
+    // save the new token array and send
+    await req.user.save()
+    res.send()
+  } catch (e){
+    res.status(500).send() 
+  }
+})
+
+// logout of all sessions
+// this logs a user out of all devices (currently not working for some reason)
+router.post('/users/logoutAll', auth, async (req, res) => {
+    try {
+        req.user.tokens = []
+        await req.user.save()
+        res.send()
+    } catch (e) {
+        res.status(500).send()
+    }
 })
 
 //update
@@ -87,6 +117,7 @@ router.delete('/users/:id', async (req, res) => {
     }
     res.send(user)
   } catch (e) {
+    console.log("delete error")
     res.send(e)
   }
 })
