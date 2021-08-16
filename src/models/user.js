@@ -48,6 +48,12 @@ const userSchema = new mongoose.Schema({
   }]
 })
 
+userSchema.virtual('tasks', {
+  ref: "Task",
+  localField: "_id",
+  foreignField: "owner"
+})
+
 // finds user by login credentials
 userSchema.statics.findByCredentials = async (email, password) => {
   // see if user with correct email exists
