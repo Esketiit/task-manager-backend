@@ -26,6 +26,7 @@ router.get('/users/:id', async (req, res) => {
 })
 
 // post
+// needs to be updated so that the user is logged in after being created
 router.post('/users', async (req, res) => {
    const user = new User(req.body)
    try {
@@ -64,9 +65,9 @@ router.post('/users/logout', auth, async (req, res) => {
     })
     // save the new token array and send
     await req.user.save()
-    res.send()
+    res.send("User logged out")
   } catch (e){
-    res.status(500).send() 
+    res.status(500).send("There was an issue") 
   }
 })
 
